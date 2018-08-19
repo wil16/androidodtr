@@ -1,12 +1,16 @@
 package com.example.wil.odtr;
 
+import android.app.ProgressDialog;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.hardware.Camera;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.text.InputType;
 import android.util.Base64;
@@ -26,15 +30,28 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.net.ssl.HttpsURLConnection;
 
 
 public class MainActivity extends AppCompatActivity implements SurfaceHolder.Callback {
@@ -44,8 +61,10 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     private SurfaceHolder surfaceHolder;
     private Camera.PictureCallback pictureCallback;
     private int cameraId = 0;
+    private Intent intent;
     private ImageView ImageViewHolder;
     Bitmap bitmap;
+    boolean check = true;
 
     private EditText passCode;
     private ImageButton btnOK;
@@ -57,7 +76,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //Display Current Date and Time
+        //Display Current Time
         Thread t = new Thread(){
             @Override
             public void run(){
@@ -69,7 +88,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                             public void run() {
                                 TextView tdate = findViewById(R.id.dateTime);
                                 long date = System.currentTimeMillis();
-                                SimpleDateFormat sdf = new SimpleDateFormat("MMMM dd, yyyy (EEEE)\nHH:mm:ss");
+                                SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
                                 String datestring = sdf.format(date);
                                 tdate.setText(datestring);
                             }
@@ -82,6 +101,13 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             }
         };
         t.start();
+
+        // Display current date
+        Calendar calendar = Calendar.getInstance();
+        TextView textViewDate = findViewById(R.id.date);
+        SimpleDateFormat sd = new SimpleDateFormat("dd/MM/yyyy \nEEEE");
+        String currenDate = sd.format(calendar.getTime());
+        textViewDate.setText(currenDate);
 
         //Passcode textbox and keypad
         passCode = findViewById(R.id.passCode);
@@ -96,14 +122,17 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         btnOK.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                camera.takePicture(null, null, pictureCallback);
+                //camera.takePicture(null, null, pictureCallback);
+                //ImageUploadToServerFunction();
+                //intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+                //startActivityForResult(intent, 7);
                 //ImageUploadToServerFunction();
                 sendData();
                 passCode.getText().clear();
             }
         });
 
-        //Camera
+        /*//Camera
        if (!getPackageManager()
                 .hasSystemFeature(PackageManager.FEATURE_CAMERA)) {
             Toast.makeText(this, "No camera on this device", Toast.LENGTH_LONG)
@@ -121,22 +150,36 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         surfaceView = findViewById(R.id.surfaceView);
         surfaceHolder = surfaceView.getHolder();
         surfaceHolder.addCallback(this);
-        surfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-
-        pictureCallback = new Camera.PictureCallback() {
-            @Override
-            public void onPictureTaken(byte[] bytes, Camera camera) {
-                Bitmap bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                Bitmap cbmp = Bitmap.createBitmap(bmp, 0, 0, bmp.getWidth(), bmp.getHeight(), null, true);
-                String pathFilename = currentDateFormat();
-                storePhotoToStorage(cbmp, pathFilename);
-                MainActivity.this.camera.startPreview();
-            }
-        };
+        surfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);*/
     }
 
+    // Start activity for result method to set captured image on imageview after click.
+   /* protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == 7 && resultCode == RESULT_OK && data != null && data.getData() != null) {
+
+            Uri uri = data.getData();
+
+            try {
+
+                // Adding captured image in bitmap.
+                bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
+
+                // adding captured image in imageview.
+                ImageViewHolder.setImageBitmap(bitmap);
+
+            } catch (IOException e) {
+
+                e.printStackTrace();
+            }
+        }
+
+    }*/
+
     // Upload captured image online on server function.
-    /*public void ImageUploadToServerFunction(){
+   /* public void ImageUploadToServerFunction(){
 
         ByteArrayOutputStream byteArrayOutputStreamObject ;
 
@@ -150,7 +193,6 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         final String ConvertImage = Base64.encodeToString(byteArrayVar, Base64.DEFAULT);
 
         class AsyncTaskUploadClass extends AsyncTask<Void,Void,String> {
-
 
             @Override
             protected String doInBackground(Void... params) {
@@ -173,9 +215,96 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         AsyncTaskUploadClassOBJ.execute();
     }*/
 
-    public class ImageProcessClass {
+   /* public class ImageProcessClass{
 
-    }
+        public String ImageHttpRequest(String requestURL,HashMap<String, String> PData) {
+
+            StringBuilder stringBuilder = new StringBuilder();
+
+            try {
+
+                java.net.URL url;
+                HttpURLConnection httpURLConnectionObject ;
+                OutputStream OutPutStream;
+                BufferedWriter bufferedWriterObject ;
+                BufferedReader bufferedReaderObject ;
+                int RC ;
+
+                url = new URL(requestURL);
+
+                httpURLConnectionObject = (HttpURLConnection) url.openConnection();
+
+                httpURLConnectionObject.setReadTimeout(19000);
+
+                httpURLConnectionObject.setConnectTimeout(19000);
+
+                httpURLConnectionObject.setRequestMethod("POST");
+
+                httpURLConnectionObject.setDoInput(true);
+
+                httpURLConnectionObject.setDoOutput(true);
+
+                OutPutStream = httpURLConnectionObject.getOutputStream();
+
+                bufferedWriterObject = new BufferedWriter(
+
+                        new OutputStreamWriter(OutPutStream, "UTF-8"));
+
+                bufferedWriterObject.write(bufferedWriterDataFN(PData));
+
+                bufferedWriterObject.flush();
+
+                bufferedWriterObject.close();
+
+                OutPutStream.close();
+
+                RC = httpURLConnectionObject.getResponseCode();
+
+                if (RC == HttpsURLConnection.HTTP_OK) {
+
+                    bufferedReaderObject = new BufferedReader(new InputStreamReader(httpURLConnectionObject.getInputStream()));
+
+                    stringBuilder = new StringBuilder();
+
+                    String RC2;
+
+                    while ((RC2 = bufferedReaderObject.readLine()) != null){
+
+                        stringBuilder.append(RC2);
+                    }
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return stringBuilder.toString();
+        }
+
+        private String bufferedWriterDataFN(HashMap<String, String> HashMapParams) throws UnsupportedEncodingException {
+
+            StringBuilder stringBuilderObject;
+
+            stringBuilderObject = new StringBuilder();
+
+            for (Map.Entry<String, String> KEY : HashMapParams.entrySet()) {
+
+                if (check)
+
+                    check = false;
+                else
+                    stringBuilderObject.append("&");
+
+                stringBuilderObject.append(URLEncoder.encode(KEY.getKey(), "UTF-8"));
+
+                stringBuilderObject.append("=");
+
+                stringBuilderObject.append(URLEncoder.encode(KEY.getValue(), "UTF-8"));
+            }
+
+            return stringBuilderObject.toString();
+        }
+
+    }*/
 
     //Send data to server
     private void sendData() {
@@ -222,27 +351,6 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             }
         }
         return cameraId;
-    }
-
-    private void storePhotoToStorage(Bitmap cbmp, String pathFilename) {
-        File outputFile = new File(Environment.getExternalStorageDirectory(),
-                "/DCIM/"+"photo_"+pathFilename+".jpg");
-        try {
-            FileOutputStream fileOutputStream = new FileOutputStream(outputFile);
-            cbmp.compress(Bitmap.CompressFormat.JPEG, 100, fileOutputStream);
-            fileOutputStream.flush();
-            fileOutputStream.close();
-        }catch (FileNotFoundException e){
-            e.printStackTrace();
-        }catch (IOException e){
-            e.printStackTrace();
-        }
-    }
-
-    private String currentDateFormat() {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HH_mm_ss");
-        String currentTime = dateFormat.format(new Date());
-        return  currentTime;
     }
 
     @Override
