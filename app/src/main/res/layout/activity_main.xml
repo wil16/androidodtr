@@ -19,17 +19,7 @@
         <SurfaceView
             android:id="@+id/surfaceView"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:visibility="gone" />
-
-        <ImageView
-            android:id="@+id/imgPreview"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:rotation="270"
-            android:scaleType="fitXY"
-            android:src="#000000"
-            android:visibility="visible" />
+            android:layout_height="match_parent"/>
     </FrameLayout>
 
     <TextView
