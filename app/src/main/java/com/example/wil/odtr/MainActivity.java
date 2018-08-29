@@ -1,20 +1,14 @@
 package com.example.wil.odtr;
 
 
-import android.content.Intent;
-import android.graphics.Bitmap;
-import android.hardware.Camera;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.InputType;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -31,16 +25,6 @@ import java.util.Map;
 
 
 public class MainActivity extends AppCompatActivity {
-
-    private SurfaceView surfaceView;
-    private Camera camera;
-    private SurfaceHolder surfaceHolder;
-    private Camera.PictureCallback pictureCallback;
-    private int cameraId = 0;
-    private Intent intent;
-    private ImageView ImageViewHolder;
-    Bitmap bitmap;
-    boolean check = true;
 
     private EditText passCode;
     private ImageButton btnOK;
